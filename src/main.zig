@@ -1,32 +1,36 @@
 const std = @import("std");
 const config = @import("config");
 const messaging = @import("messaging");
+const shuffle = @import("shuffle");
 
 pub fn main(init: std.process.Init) !void {
+    //Getting args from cmd line
     const arena: std.mem.Allocator = init.arena.allocator();
-
-    // Accessing command line arguments:
     const args = try init.minimal.args.toSlice(arena);
+    const allocator = init.gpa;
 
+    //getting io instance
     const io = init.io;
 
-    const cfg : config = config.ParseFromArgs(args) catch |err| {
+    //creating writer to write to stdout
+    var buffer_stdout : [512]u8 = undefined;
+    var stdout_file_writer : std.Io.File.Writer = .init(.stdout(), io, &buffer_stdout);
+    defer stdout_file_writer.end() catch {};
+    const stdout_writer = &stdout_file_writer.interface;
+
+    //Reading inputs from command line to determine what needs to be done.
+    var cfg : config = .Default();
+    config.ParseFromArgs(&cfg, args) catch |err| {
         if (error.HelpMessageRequested == err) {
-            messaging.PrintHelp(io);
+            try messaging.PrintHelp(stdout_writer);
+        }
+        else {
+            std.log.err("Error code: {any}", .{ err });
         }
         return;
     };
 
-    _ = &cfg;
+    std.log.debug("Input file is: \"{s}\"", .{ cfg.file_input });
 
-    //// Stdout is for the actual output of your application, for example if you
-    //// are implementing gzip, then only the compressed bytes should be sent to
-    //// stdout, not any debugging messages.
-    //var stdout_buffer: [1024]u8 = undefined;
-    //var stdout_file_writer: Io.File.Writer = .init(.stdout(), io, &stdout_buffer);
-    //const stdout_writer = &stdout_file_writer.interface;
-
-    //try mnemonica.printAnotherMessage(stdout_writer);
-
-    //try stdout_writer.flush(); // Don't forget to flush!
+    try shuffle.ShuffleFile(io, allocator, cfg.file_input);
 }

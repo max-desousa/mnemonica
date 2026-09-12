@@ -16,6 +16,12 @@ pub fn build(b: *std.Build) void {
         .optimize = optimize,
     });
 
+    const mod_shuffle = b.createModule(.{
+        .root_source_file = b.path("src/shuffle.zig"),
+        .target = target,
+        .optimize = optimize,
+    });
+
     const exe = b.addExecutable(.{
         .name = "mnemonica",
         .root_module = b.createModule(.{
@@ -25,6 +31,7 @@ pub fn build(b: *std.Build) void {
             .imports = &.{
                 .{ .name = "config", .module = mod_config },
                 .{ .name = "messaging", .module = mod_messging },
+                .{ .name = "shuffle", .module = mod_shuffle },
             },
         }),
     });
@@ -38,7 +45,5 @@ pub fn build(b: *std.Build) void {
 
     run_cmd.step.dependOn(b.getInstallStep());
 
-    if (b.args) |args| {
-        run_cmd.addArgs(args);
-    }
+    run_cmd.addPassthruArgs();
 }
